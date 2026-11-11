@@ -4,7 +4,8 @@
     "dev": "bun run --hot server/index.ts",
     "format:write": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint:server": "cd server && eslint ."
+    "lint": "eslint .",
+    "lint:server": "eslint server"
   },
   "dependencies": {
     "hono": "^4.13.16"
