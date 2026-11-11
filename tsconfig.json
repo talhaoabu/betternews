@@ -29,8 +29,8 @@
 
     // Path aliases
     "paths": {
-      "@shared/*": ["./shared/*"],
-      "@/*": ["./server/"]
+      "@/shared/*": ["./shared/*"],
+      "@/*": ["./server/*"]
     }
   }
 }

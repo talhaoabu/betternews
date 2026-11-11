@@ -1,4 +1,4 @@
 dist
-buuid 
+build 
 node_modules
 routeTree.gen.ts
