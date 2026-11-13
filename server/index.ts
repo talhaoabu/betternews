@@ -1,10 +1,13 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
+
 import type { ErrorResponse } from "@/shared/types";
+
 import type { Context } from "./context";
 import { lucia } from "./lucia";
 import { authRouter } from "./routes/auth";
+
 //import { showRoutes } from "hono/dev";
 
 const app = new Hono<Context>();
@@ -42,6 +45,8 @@ app.use("*", async (c, next) => {
 const routes = app.basePath("/api").route("/auth", authRouter);
 
 app.onError((err, c) => {
+  //console.dir(err);
+  // console.dir(c)
   // ── ১. Expected error: আমি নিজে HTTPException throw করেছি
   if (err instanceof HTTPException) {
     const errResponse =
@@ -75,9 +80,8 @@ app.onError((err, c) => {
   );
 });
 
-
 // export default app;-এর ঠিক আগে
-// 
+//
 export default app;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export type ApiRoutes = typeof routes;

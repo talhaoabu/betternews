@@ -2,16 +2,15 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { eq } from "drizzle-orm";
 
-import { zValidator } from "@hono/zod-validator";
-import { generateId } from "lucia";
-import postgres from "postgres";
-
-import { loginSchema, type SuccessResponse } from "@/shared/types";
 import { db } from "@/adapter";
 import type { Context } from "@/context";
 import { userTable } from "@/db/schemas/auth";
 import { lucia } from "@/lucia";
 import { loggedIn } from "@/middleware/loggedIn";
+import { zValidator } from "@hono/zod-validator";
+import { generateId } from "lucia";
+
+import { loginSchema, type SuccessResponse } from "@/shared/types";
 
 export const authRouter = new Hono<Context>()
   // ── SIGNUP ──────────────────────────────
@@ -20,30 +19,32 @@ export const authRouter = new Hono<Context>()
     const passwordHash = await Bun.password.hash(password);
     const userId = generateId(15);
 
-    try {
-      await db.insert(userTable).values({
-        id: userId,
-        username,
-        password_hash: passwordHash,
+    const [existingUser] = await db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.username, username))
+      .limit(1);
+
+    if (existingUser) {
+      throw new HTTPException(409, {
+        message: "Username already used",
+        cause: { form: true },
       });
-
-      const session = await lucia.createSession(userId, {});
-      const sessionCookie = lucia.createSessionCookie(session.id).serialize();
-      c.header("Set-Cookie", sessionCookie, { append: true });
-
-      return c.json<SuccessResponse>(
-        { success: true, message: "User created" },
-        201,
-      );
-    } catch (error) {
-      if (error instanceof postgres.PostgresError && error.code === "23505") {
-        throw new HTTPException(409, {
-          message: "Username already used",
-          cause: { form: true },
-        });
-      }
-      throw new HTTPException(500, { message: "Failed to create user" });
     }
+    await db.insert(userTable).values({
+      id: userId,
+      username,
+      password_hash: passwordHash,
+    });
+
+    const session = await lucia.createSession(userId, {});
+    const sessionCookie = lucia.createSessionCookie(session.id).serialize();
+    c.header("Set-Cookie", sessionCookie, { append: true });
+
+    return c.json<SuccessResponse>(
+      { success: true, message: "User created" },
+      201,
+    );
   })
 
   // ── LOGIN ───────────────────────────────
@@ -67,7 +68,7 @@ export const authRouter = new Hono<Context>()
       password,
       existingUser.password_hash,
     );
-    
+
     if (!validPassword) {
       throw new HTTPException(401, {
         message: "Incorrect password",
@@ -79,7 +80,10 @@ export const authRouter = new Hono<Context>()
     const sessionCookie = lucia.createSessionCookie(session.id).serialize();
     c.header("Set-Cookie", sessionCookie, { append: true });
 
-    return c.json<SuccessResponse>({ success: true, message: "Logged in" }, 200);
+    return c.json<SuccessResponse>(
+      { success: true, message: "Logged in" },
+      200,
+    );
   })
 
   // ── LOGOUT ──────────────────────────────
