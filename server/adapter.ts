@@ -1,22 +1,22 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 
+import { DrizzlePostgreSQLAdapter } from "@lucia-auth/adapter-drizzle";
 import postgres from "postgres";
 import { z } from "zod";
 
-// ১. .env-এ যা থাকা দরকার তার নিয়ম
-const EnvSchema = z.object({
-  DATABASE_URL: z.string().url(),
-});
+import { sessionTable, userTable } from "./db/schemas/auth";
 
-// ২. যাচাই করো — না থাকলে বা ভুল হলে এখানেই পরিষ্কার error
+const EnvSchema = z.object({ DATABASE_URL: z.string().url() });
 const processEnv = EnvSchema.parse(process.env);
 
-// ৩. driver দিয়ে আসল connection
 const queryClient = postgres(processEnv.DATABASE_URL);
 
-// ৪. সেই connection-এর উপরে Drizzle বসানো — এটাই সব জায়গায় import হবে
-export const db = drizzle(queryClient);
+export const db = drizzle(queryClient, {
+  schema: { user: userTable, session: sessionTable },
+});
 
-// ৫. TEST — কাজ করলে মুছে দেবে
-//const result = await db.execute("select 1");
-//console.log(result);
+export const adapter = new DrizzlePostgreSQLAdapter(
+  db,
+  sessionTable,
+  userTable,
+);
